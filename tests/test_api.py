@@ -43,3 +43,13 @@ class TestAuthenticatedFlows(unittest.TestCase):
   self.assertEqual(self.calls[0][:3],('messages','DELETE','?user_id=eq.user_a'))
  def test_resend_stays_off(self):self.assertEqual(self.client.post('/api/email').status_code,403)
  def test_empty_prompt_rejected(self):self.assertEqual(self.client.post('/api/tasks',json={'prompt':''}).status_code,422)
+
+class TestExternalResponse(unittest.TestCase):
+ def test_empty_success_response(self):
+  from unittest.mock import patch
+  import asyncio,httpx
+  class Client:
+   async def __aenter__(self):return self
+   async def __aexit__(self,*args):pass
+   async def request(self,*args,**kwargs):return httpx.Response(204,content=b'')
+  with patch.object(app.httpx,'AsyncClient',return_value=Client()):self.assertIsNone(asyncio.run(app.external('https://example.invalid')))
