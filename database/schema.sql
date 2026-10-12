@@ -44,7 +44,7 @@ revoke all on public.voice_usage from anon,authenticated;
 create or replace function public.reserve_voice_characters(owner_id text,amount integer,daily_cap integer)
 returns boolean language plpgsql security definer set search_path=public as $$
 begin
- if amount<1 or amount>1000 or daily_cap<1 or daily_cap>5000 then return false; end if;
+ if amount<1 or amount>1000 or amount>daily_cap or daily_cap<1 or daily_cap>5000 then return false; end if;
  insert into public.voice_usage(user_id,day,characters) values(owner_id,current_date,amount)
  on conflict(user_id,day) do update set characters=voice_usage.characters+excluded.characters
  where voice_usage.characters+excluded.characters<=daily_cap;
