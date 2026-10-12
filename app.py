@@ -37,7 +37,9 @@ async def identity(request:Request):
   claims=jwt.decode(token,key,algorithms=['RS256'],audience=project,issuer='https://securetoken.google.com/'+project,options={'require':['exp','iat','sub','auth_time']})
   if not isinstance(claims['sub'],str) or not 1<=len(claims['sub'])<=128 or claims['auth_time']>time.time():raise ValueError()
  except Exception:raise HTTPException(401,'Invalid or expired sign-in')
- if os.getenv('ALLOWED_USER_EMAIL') and claims.get('email')!=os.getenv('ALLOWED_USER_EMAIL'):raise HTTPException(403,'Account not allowed')
+ allowed={os.getenv('ALLOWED_USER_EMAIL')}
+ if os.getenv('ENABLE_TEST_USER')=='true' and os.getenv('TEST_USER_EMAIL'):allowed.add(os.getenv('TEST_USER_EMAIL'))
+ if os.getenv('ALLOWED_USER_EMAIL') and claims.get('email') not in allowed:raise HTTPException(403,'Account not allowed')
  if not claims.get('email_verified'):raise HTTPException(403,'Verify your Firebase account email first')
  if request.method not in ['GET','HEAD'] and request.headers.get('Origin')!=setting('APP_ORIGIN'):raise HTTPException(403,'Origin not allowed')
  return claims
