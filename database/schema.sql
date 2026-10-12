@@ -31,3 +31,25 @@ language sql security definer set search_path = public as $$
 $$;
 revoke execute on function public.fail_stale_tasks() from public,anon,authenticated;
 grant execute on function public.fail_stale_tasks() to service_role;
+-- Enforce one active task per user even if concurrent requests pass the precheck.
+create unique index if not exists one_active_task_per_user
+on public.tasks(user_id) where status in ('queued','running');
+-- Fixed-window usage control for voice. Key uses Firebase UID and UTC day.
+create table if not exists public.voice_usage (
+ user_id text not null, day date not null, characters integer not null default 0,
+ primary key(user_id,day)
+);
+alter table public.voice_usage enable row level security;
+revoke all on public.voice_usage from anon,authenticated;
+create or replace function public.reserve_voice_characters(owner_id text,amount integer,daily_cap integer)
+returns boolean language plpgsql security definer set search_path=public as $$
+begin
+ if amount<1 or amount>1000 or daily_cap<1 or daily_cap>5000 then return false; end if;
+ insert into public.voice_usage(user_id,day,characters) values(owner_id,current_date,amount)
+ on conflict(user_id,day) do update set characters=voice_usage.characters+excluded.characters
+ where voice_usage.characters+excluded.characters<=daily_cap;
+ return found;
+end;
+$$;
+revoke execute on function public.reserve_voice_characters(text,integer,integer) from public,anon,authenticated;
+grant execute on function public.reserve_voice_characters(text,integer,integer) to service_role;
