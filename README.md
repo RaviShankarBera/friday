@@ -22,7 +22,7 @@ Vercel currently detects a FastAPI `app` instance in root `app.py`. Static files
 
 ## Authentication
 
-Enable Firebase email/password authentication. Server validates token signature, audience, issuer, expiry and verified email. Restrict the owner with `ALLOWED_USER_EMAIL=rsbera707@gmail.com`. Add deployed domain to Firebase authorized domains. Firebase web API key is a public app identifier, not a service credential. Supabase service-role key stays server-side. Row level security is enabled with no client policies; all API queries are scoped to the verified Firebase UID. Browser tokens stay in memory and expire; sign in again on expiry. No Google login UI, MFA, password-reset UI, session refresh, account deletion or abuse-resistant production auth is included yet.
+Enable Firebase email/password authentication. Server validates token signature, audience, issuer, expiry and verified email. Restrict the owner with `ALLOWED_USER_EMAIL=rsbera707@gmail.com`. Add deployed domain to Firebase authorized domains. Firebase web API key is a public app identifier, not a service credential. Supabase service-role key stays server-side. Row level security is enabled with no client policies; all API queries are scoped to the verified Firebase UID. Email/password tokens stay in memory and expire; sign in again on expiry. Google popup login is included. No MFA, password-reset UI, session refresh, account deletion or abuse-resistant production auth is included yet.
 
 ## Agent and dashboard
 
@@ -41,3 +41,5 @@ ElevenLabs requires a configured key, verified voice ID and model. Enable only w
 Local command log resets on reload. Authenticated task prompts, results and conversation memory go to the chosen Supabase project and, in AI mode, the model provider. TTS text goes to ElevenLabs when enabled. Do not enter secrets in prompts. Delete-memory control deletes conversation rows, not task history or workspace rows. Backups, retention and full account deletion need setup. Free-tier quotas, inactivity, data handling and plan terms must be verified for each configured service; no permanent-free guarantee.
 
 Independent fan-inspired project, not affiliated with Marvel or connected to Instinct. Android/iOS and native permissions are later phases.
+
+Temporary integration fixtures: ENABLE_TEST_USER=true permits only the explicitly configured TEST_USER_EMAIL in addition to the owner. This still requires verified Firebase tokens and separate UID ownership. Disable it and delete fixtures after tests. Never leave a broadly usable test login active.
