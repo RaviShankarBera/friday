@@ -20,3 +20,31 @@ with sync_playwright() as p:
  print(json.dumps({'errors':errors,'layoutWidths':[1280,390,320],'textFallback':True,'escapedUserInput':True,'micTimeoutMock':True,'stopMock':True}));assert not errors
  browser.close()
 server.shutdown()
+
+# Optional audio regression uses an existing MP3. No provider requests or credits.
+import os
+if os.environ.get("FRIDAY_TEST_AUDIO"):
+ import pathlib,threading,http.server,functools,json
+ from playwright.sync_api import sync_playwright
+ root=pathlib.Path(__file__).resolve().parent.parent/'public'
+ # Generated audio is deliberately not committed. Supply the already-generated MP3.
+ blob=pathlib.Path(os.environ["FRIDAY_TEST_AUDIO"]).read_bytes()
+ s=http.server.ThreadingHTTPServer(('127.0.0.1',8088),functools.partial(http.server.SimpleHTTPRequestHandler,directory=str(root)))
+ threading.Thread(target=s.serve_forever,daemon=True).start()
+ with sync_playwright() as p:
+  b=p.chromium.launch(executable_path='/usr/bin/google-chrome',headless=True,args=['--no-sandbox','--autoplay-policy=no-user-gesture-required'])
+  page=b.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+  page.route('**/api/config',lambda r:r.fulfill(json={'configured':False,'ttsConfigured':False}))
+  page.route('**/api/tts',lambda r:r.fulfill(status=200,content_type='audio/mpeg',body=blob))
+  page.goto('http://127.0.0.1:8088');page.locator('#settingsBtn').click();page.locator('#speakToggle').check();page.locator('#settingsDialog [data-close]').click()
+  page.evaluate('ttsConfigured=true;authToken="local-test-only";awaitingName=false')
+  page.locator('#commandInput').fill('Friday: Godspeed');page.locator('#commandForm button').click()
+  page.wait_for_function('audio && audio.readyState>=2');during=page.evaluate('({duration:audio.duration,readyState:audio.readyState,paused:audio.paused})')
+  page.wait_for_function('audio===null && document.getElementById("coreStatus").textContent==="STANDBY"')
+  # Stalled media metadata must be bounded and call a clearly reported fallback.
+  page.evaluate('window.Audio=class {pause(){}load(){} };ttsConfigured=true;authToken="local-test-only"')
+  page.clock.install();page.locator('#commandInput').fill('Friday: Godspeed');page.locator('#commandForm button').click();page.wait_for_function('audio!==null');page.clock.fast_forward(8100)
+  page.wait_for_function('audio===null');assert 'playback could not start' in page.locator('#messages').inner_text()
+  print(json.dumps({'realMP3LocalPlayback':during,'returnsToStandby':True,'metadataTimeoutFallback':True,'pageErrors':errors}));assert not errors
+  b.close()
+ s.shutdown()
