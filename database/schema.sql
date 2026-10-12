@@ -53,3 +53,7 @@ end;
 $$;
 revoke execute on function public.reserve_voice_characters(text,integer,integer) from public,anon,authenticated;
 grant execute on function public.reserve_voice_characters(text,integer,integer) to service_role;
+-- Explicit backend privileges. RLS bypass does not replace SQL table grants.
+grant usage on schema public to service_role;
+grant select,insert,update,delete on public.tasks,public.messages,public.workspace_files,public.voice_usage to service_role;
+grant usage,select on sequence public.messages_id_seq to service_role;
