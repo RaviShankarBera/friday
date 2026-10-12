@@ -119,6 +119,10 @@ async def tts(body:SpeechInput,claims=Depends(identity)):
  # Only signed-in owner can invoke a configured service; no silent paid fallback.
  key=setting('ELEVENLABS_API_KEY');voice=setting('ELEVENLABS_VOICE_ID');model=setting('ELEVENLABS_MODEL')
  if os.getenv('ENABLE_ELEVENLABS')!='true':raise HTTPException(503,'ElevenLabs not enabled')
+ try:cap=int(os.getenv('TTS_DAILY_CHARACTER_CAP','1000'))
+ except ValueError:raise HTTPException(503,'Invalid voice quota configuration')
+ reserved=await database('rpc/reserve_voice_characters','POST',body={'owner_id':claims['sub'],'amount':len(body.text),'daily_cap':cap})
+ if not reserved:raise HTTPException(429,'Daily voice limit reached; browser voice remains available')
  import re
  if not re.fullmatch(r'[A-Za-z0-9_-]{1,100}',voice):raise HTTPException(503,'Invalid voice configuration')
  async with httpx.AsyncClient(timeout=15) as client:
