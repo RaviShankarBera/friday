@@ -14,14 +14,21 @@ def setting(name):
 async def external(url,method='GET',headers=None,body=None):
  async with httpx.AsyncClient(timeout=20,follow_redirects=False) as client:
   r=await client.request(method,url,headers=headers,json=body)
-  if r.status_code>=300:raise HTTPException(503,'External service unavailable; check configuration and quota')
+  if r.status_code>=300:
+   safe_code=''
+   try:
+    data=r.json();candidate=data.get('code','') if isinstance(data,dict) else ''
+    if isinstance(candidate,str) and candidate.isalnum() and len(candidate)<30:safe_code=' '+candidate
+   except ValueError:pass
+   raise HTTPException(503,'External service returned '+str(r.status_code)+safe_code)
   if not r.content:return None
   try:return r.json()
   except ValueError:raise HTTPException(503,'External service returned a non-JSON response')
 async def database(table,method='GET',query='',body=None):
  url=setting('SUPABASE_URL');key=setting('SUPABASE_SERVICE_ROLE_KEY')
  if not url.startswith('https://'):raise HTTPException(503,'Invalid database configuration')
- return await external(url+'/rest/v1/'+table+query,method,{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json','Prefer':'return=representation'},body)
+ try:return await external(url+'/rest/v1/'+table+query,method,{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json','Prefer':'return=representation'},body)
+ except HTTPException as error:raise HTTPException(503,'Database '+table+': '+str(error.detail))
 def owner(uid):
  from urllib.parse import quote
  return 'user_id=eq.'+quote(uid,safe='')
