@@ -43,3 +43,6 @@ Local command log resets on reload. Authenticated task prompts, results and conv
 Independent fan-inspired project, not affiliated with Marvel or connected to Instinct. Android/iOS and native permissions are later phases.
 
 Temporary integration fixtures: ENABLE_TEST_USER=true permits only the explicitly configured TEST_USER_EMAIL in addition to the owner. This still requires verified Firebase tokens and separate UID ownership. Disable it and delete fixtures after tests. Never leave a broadly usable test login active.
+
+
+<!-- build: polish v2 -->
