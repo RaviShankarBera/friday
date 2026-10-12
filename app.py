@@ -15,7 +15,9 @@ async def external(url,method='GET',headers=None,body=None):
  async with httpx.AsyncClient(timeout=20,follow_redirects=False) as client:
   r=await client.request(method,url,headers=headers,json=body)
   if r.status_code>=300:raise HTTPException(503,'External service unavailable; check configuration and quota')
-  return r.json()
+  if not r.content:return None
+  try:return r.json()
+  except ValueError:raise HTTPException(503,'External service returned a non-JSON response')
 async def database(table,method='GET',query='',body=None):
  url=setting('SUPABASE_URL');key=setting('SUPABASE_SERVICE_ROLE_KEY')
  if not url.startswith('https://'):raise HTTPException(503,'Invalid database configuration')
